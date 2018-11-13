@@ -143,9 +143,10 @@ LEFT JOIN Sales.Employee AS m
 ON e.ManagerID = m.EmployeeID
 ORDER BY e.ManagerID;
 
-
+/*
 GO
 DROP TABLE Sales.Employee;
 GO
 DROP PROCEDURE dbo.tmpGetEmployeeManagers;
 GO
+*/
