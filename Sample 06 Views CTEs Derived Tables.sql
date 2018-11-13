@@ -2,78 +2,93 @@
 -- Views
 ---------------------------------------------------------------------------------
 -- Create a view
-CREATE VIEW SalesLT.vCustomerAddress
+CREATE VIEW Sales.vCustomerAddress
 AS
-SELECT C.CustomerID, FirstName, LastName, AddressLine1, City, StateProvince 
-FROM
-SalesLT.Customer C JOIN SalesLT.CustomerAddress CA
-ON C.CustomerID=CA.CustomerID
-JOIN SalesLT.Address A
-ON CA.AddressID=A.AddressID
+     SELECT C.CustomerID,
+            FirstName,
+            LastName,
+            AddressLine1,
+            City
+     FROM Sales.Customer C
+          JOIN Person.Person AS p ON c.PersonID = p.BusinessEntityID
+          JOIN Person.BusinessEntityAddress AS e ON e.BusinessEntityID = p.BusinessEntityID
+          JOIN Person.Address a ON a.AddressID = e.AddressID;
 
 -- Query the view
-SELECT CustomerID, City
-FROM SalesLT.vCustomerAddress
+SELECT CustomerID,
+       City
+FROM Sales.vCustomerAddress;
 
 -- Join the view to a table
-SELECT c.StateProvince, c.City, ISNULL(SUM(s.TotalDue), 0.00) AS Revenue
-FROM SalesLT.vCustomerAddress AS c
-LEFT JOIN SalesLT.SalesOrderHeader AS s
-ON s.CustomerID = c.CustomerID
-GROUP BY c.StateProvince, c.City
-ORDER BY c.StateProvince, Revenue DESC;
+SELECT c.City,
+       ISNULL(SUM(s.TotalDue), 0.00) AS Revenue
+FROM Sales.vCustomerAddress AS c
+     LEFT JOIN Sales.SalesOrderHeader AS s ON s.CustomerID = c.CustomerID
+GROUP BY c.City
+ORDER BY Revenue DESC;
 ----------------------------------------------------------------------------------
 -- CTE Commont Table Expressions
 ----------------------------------------------------------------------------------
 --Using a CTE
-WITH ProductsByCategory (ProductID, ProductName, Category)
-AS
-(
-	SELECT p.ProductID, p.Name, c.Name AS Category
-	 FROM SalesLT.Product AS p
-	 JOIN SalesLT.ProductCategory AS c
-	 ON p.ProductCategoryID = c.ProductCategoryID
-)
-
-SELECT Category, COUNT(ProductID) AS Products
-FROM ProductsByCategory
-GROUP BY Category
-ORDER BY Category;
+WITH ProductsByCategory(ProductID,
+                        ProductName,
+                        Category)
+     AS (SELECT p.ProductID,
+                p.Name,
+                c.Name AS Category
+         FROM Production.Product p
+              JOIN Production.ProductSubcategory AS sc ON p.ProductSubcategoryID = sc.ProductSubcategoryID
+              JOIN Production.ProductCategory AS c ON sc.ProductCategoryID = c.ProductcategoryID)
+     SELECT Category,
+            COUNT(ProductID) AS Products
+     FROM ProductsByCategory
+     GROUP BY Category
+     ORDER BY Category;
 
 
 -- Recursive CTE
-SELECT * FROM SalesLT.Employee
+SELECT *
+FROM Sales.Employee;
 
 -- Using the CTE to perform recursion
-WITH OrgReport (ManagerID, EmployeeID, EmployeeName, Level)
-AS
-(
-	-- Anchor query
-	SELECT e.ManagerID, e.EmployeeID, EmployeeName, 0
-	FROM SalesLT.Employee AS e
-	WHERE ManagerID IS NULL
-
-	UNION ALL
-
-	-- Recursive query
-	SELECT e.ManagerID, e.EmployeeID, e.EmployeeName, Level + 1
-	FROM SalesLT.Employee AS e
-	INNER JOIN OrgReport AS o ON e.ManagerID = o.EmployeeID
-)
-
-SELECT * FROM OrgReport
-OPTION (MAXRECURSION 3);
+WITH OrgReport(ManagerID,
+               EmployeeID,
+               EmployeeName,
+               Level)
+     AS (
+     -- Anchor query
+     SELECT e.ManagerID,
+            e.EmployeeID,
+            EmployeeName,
+            0
+     FROM Sales.Employee AS e
+     WHERE ManagerID IS NULL
+     UNION ALL
+     -- Recursive query
+     SELECT e.ManagerID,
+            e.EmployeeID,
+            e.EmployeeName,
+            Level + 1
+     FROM Sales.Employee AS e
+          INNER JOIN OrgReport AS o ON e.ManagerID = o.EmployeeID)
+     SELECT *
+     FROM OrgReport
+     OPTION(MAXRECURSION 3);
 
 
 ----------------------------------------------------------------------------------
 -- Derived Tables
 ----------------------------------------------------------------------------------
-
-SELECT Category, COUNT(ProductID) AS Products
+SELECT Category,
+       COUNT(ProductID) AS Products
 FROM
-	(SELECT p.ProductID, p.Name AS Product, c.Name AS Category
-	 FROM SalesLT.Product AS p
-	 JOIN SalesLT.ProductCategory AS c
-	 ON p.ProductCategoryID = c.ProductCategoryID) AS ProdCats
+(
+    SELECT p.ProductID,
+           p.Name,
+           c.Name AS Category
+    FROM Production.Product p
+         JOIN Production.ProductSubcategory AS sc ON p.ProductSubcategoryID = sc.ProductSubcategoryID
+         JOIN Production.ProductCategory AS c ON sc.ProductCategoryID = c.ProductcategoryID
+) ProductsByCategory
 GROUP BY Category
 ORDER BY Category;
